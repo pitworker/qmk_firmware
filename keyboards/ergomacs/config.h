@@ -13,11 +13,8 @@
 // row, so 4 + 1 = 5 rows total
 #define MATRIX_ROWS 5
 
-// Using a duplex (2-way) matrix, each column in the electrical matrix accounts
-// for two columns in the actual layout.
-// Each hand has six layout columns total, thus three matrix columns, so
-// (6 / 2) * 2 = 6 matrix columns total
-#define MATRIX_COLS 6
+// Each hand has six columns, so 6 * 2 = 12 matrix columns total
+#define MATRIX_COLS 12
 
 // RP Pico GPIO pinouts for rows
 // Rows ordered bottom-top
@@ -26,7 +23,10 @@
 // RP Pico GPIO pinouts for columns
 // Lefthand GP0-GP2, righthand GP11-GP12
 // Columns (both hands) ordered left-right
-#define MATRIX_COL_PINS { GP0, GP1, GP2, GP11, GP12, GP13 }
+// Using a duplex (2-way) matrix, each column in the electrical layout accounts
+// for two columns in the actual matrix, which is why there are 12 columns but
+// only 6 column pins.
+#define MATRIX_COL_PINS { GP0, GP1, GP2, GP10, GP11, GP12 }
 
 /*
  * Feature disable options

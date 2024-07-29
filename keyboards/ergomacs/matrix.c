@@ -1,19 +1,20 @@
-/*************************************************************************
- * Copyright 2024 Swan (https://github.com/pitworker/)                   *
- *                                                                       *
- * This program is free software: you can redistribute it and/or modify  *
- * it under the terms of the GNU General Public License as published by  *
- * the Free Software Foundation, either version 2 of the License, or     *
- * (at your option) any later version.                                   *
- *                                                                       *
- * This program is distributed in the hope that it will be useful,       *
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- * GNU General Public License for more details.                          *
- *                                                                       *
- * You should have received a copy of the GNU General Public License     *
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *************************************************************************/
+/**************************************************************************
+ * Copyright 2024 Swan (https://github.com/pitworker)                     *
+ * Based on 2-way matrix as explained by e3w2q (https://github.com/e3w2q) *
+ *                                                                        *
+ * This program is free software: you can redistribute it and/or modify   *
+ * it under the terms of the GNU General Public License as published by   *
+ * the Free Software Foundation, either version 2 of the License, or      *
+ * (at your option) any later version.                                    *
+ *                                                                        *
+ * This program is distributed in the hope that it will be useful,        *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of         *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          *
+ * GNU General Public License for more details.                           *
+ *                                                                        *
+ * You should have received a copy of the GNU General Public License      *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.  *
+ **************************************************************************/
 
 #include "quantum.h"
 
@@ -82,60 +83,82 @@ static void init_pins (void) {
 
 static bool matrix_read_rows_on_col (
   matrix_row_t current_matrix[],
-  uint8_t current_col,
+  uint8_t current_col_index,
   matrix_row_t row_shifter
 ) {
   bool matrix_has_changed = false;
   bool key_pressed = false;
 
-  // Select col
-  if (!select_col(current_col)) { // select col
-    return;                       // skip NO_PIN col
+  // Skip NO_PIN cols
+  if (!select_col(current_col_index)) {
+    return;
   }
   matrix_output_select_delay();
 
   // For each row...
   for (uint8_t row_index = 0; row_index < ROWS_PER_HAND; row_index++) {
+    matrix_row_t old_matrix_row = current_matrix[row_index];
+
     // Check row pin state
-    if (readMatrixPin(row_pins[row_index]) == 0) {
-      // Pin LO, set col bit
+    if (read_matrix_pin(row_pins[row_index]) == 0) {
+      // Pin LOW, set col bit
       current_matrix[row_index] |= row_shifter;
       key_pressed = true;
     } else {
-      // Pin HI, clear col bit
+      // Pin HIGH, clear col bit
       current_matrix[row_index] &= ~row_shifter;
     }
+
+    // Check if any changes were made to the matrix
+    matrix_has_changed =
+      matrix_has_changed || (old_matrix_row == current_matrix[row_index]);
   }
 
-  // Unselect col
-  unselect_col(current_col);
-  matrix_output_unselect_delay(current_col, key_pressed); // wait for all Row signals to go HIGH
+  // Unselect col pin
+  unselect_col(current_col_index);
+  // Wait for all row signals to go HIGH
+  matrix_output_unselect_delay(current_col_index, key_pressed);
 
   return matrix_has_changed;
 }
 
 static bool matrix_read_cols_on_row (
   matrix_row_t current_matrix[],
-  uint8_t current_row
+  uint8_t current_row_index
 ) {
   bool matrix_has_changed = false;
   matrix_row_t current_row_values = 0;
-  matrix_row_t row_shifter = MATRIX_ROW_SHIFTER;
+  // Start row_shifter with a one bit offset; only scanning odd matrix columns
+  matrix_row_t row_shifter = MATRIX_ROW_SHIFTER << 1;
 
+  // Skip NO_PIN rows
+  if (!select_row(current_row_index)) {
+    return;
+  }
+  matrix_output_select_delay();
+
+  // For each col...
   for (
     uint8_t col_index = 0;
-    col_index < MATRIX_COLS;
-    col_index++, row_shifter <<= 1
+    col_index << 1 < MATRIX_COLS;
+    col_index++, row_shifter <<= 2
   ) {
-    pin_t pin = direct_pins[current_row][col_index];
-    matrix_row_t current_value_in_row = read_matrix_pin(pin) ? 0 : row_shifter;
-    matrix_has_changed |=
-      current_value_in_row != current_matrix[current_row] & row_shifter;
+    uint8_t pin_state = read_matrix_pin(col_pins[col_index]);
+
+    // Populate the matrix row with the state of the col pin
     current_row_values |= current_value_in_row;
   }
 
+  // Unselect row pin
+  unselect_row(current_row_index);
+  // Wait for all col signals to go HIGH
+  matrix_output_unselect_delay(current_row_index, current_row_value != 0);
+
+  // Check if any changes are being made to the matrix
+  matrix_has_changed = current_row_values == current_matrix[current_row_index];
+
   // Update the matrix
-  current_matrix[current_row] = current_row_values;
+  current_matrix[current_row_index] = current_row_values;
 
   return matrix_has_changed;
 }
@@ -149,11 +172,11 @@ bool matrix_scan_custom (matrix_row_t current_matrix[]) {
   bool matrix_has_changed = false;
   matrix_row_t row_shifter = MATRIX_ROW_SHIFTER;
 
-  // TODO: add matrix scanning routine here
-
   // scan cols
   for (uint8_t row_index = 0; row_index < ROWS_PER_HAND; row_index++) {
-    matrix_has_changed |= matrix_read_cols_on_row(current_matrix[], row_index);
+    matrix_has_changed =
+      matrix_has_changed ||
+      matrix_read_cols_on_row(current_matrix[], row_index);
   }
 
   // init rows
@@ -162,14 +185,12 @@ bool matrix_scan_custom (matrix_row_t current_matrix[]) {
   // scan rows
   for (
     uint8_t col_index = 0;
-    col_index < MATRIX_COLS;
-    col_index++, row_shifter <<= 1
+    col_index << 1 < MATRIX_COLS;
+    col_index++, row_shifter <<= 2 // row scan only for even matrix columns
   ) {
-    matrix_has_changed |= matrix_read_rows_on_col(
-      current_matrix[],
-      col_index,
-      row_shifter
-    );
+    matrix_has_changed =
+      matrix_has_changed ||
+      matrix_read_rows_on_col(current_matrix[], col_index, row_shifter);
   }
 
   // init cols
