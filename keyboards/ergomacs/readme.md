@@ -2,11 +2,11 @@
 
 ![ergomacs](imgur.com image replace me!)
 
-*A short description of the keyboard/project*
+Ergomacs is a split ortholinear keyboard with 4x6 keywells, 5-key thumb clusters, and a 2u vertical enter. The keyboard was designed by Swan to be ergonomically optimized for Emacs. See the [project writeup](Add link here) for more information.
 
-* Keyboard Maintainer: [Swan Carpenter](https://github.com/pitworker)
-* Hardware Supported: *The PCBs, controllers supported*
-* Hardware Availability: *Links to where you can find this hardware*
+* Keyboard Maintainer: [Swan](https://github.com/pitworker)
+* Hardware Supported: Raspberry Pi Pico (RP2040)
+* Hardware Availability: This keyboard is handwired. More information about hardware and design can be found in the project writeup.
 
 Make example for this keyboard (after setting up your build environment):
 
