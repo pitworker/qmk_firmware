@@ -1,8 +1,8 @@
-# ergomacs
+# orthomacs
 
-![ergomacs](imgur.com image replace me!)
+![orthomacs](imgur.com image replace me!)
 
-Ergomacs is a split ortholinear keyboard with 4x6 keywells, 5-key thumb clusters, and a 2u vertical enter. The keyboard was designed by Swan to be ergonomically optimized for Emacs. See the [project writeup](Add link here) for more information.
+Orthomacs is a split ortholinear keyboard with 4x6 keywells, 5-key thumb clusters, and a 2u vertical enter. The keyboard was designed by Swan to be ergonomically optimized for Emacs. See the [project writeup](Add link here) for more information.
 
 * Keyboard Maintainer: [Swan](https://github.com/pitworker)
 * Hardware Supported: Raspberry Pi Pico (RP2040)
@@ -10,11 +10,11 @@ Ergomacs is a split ortholinear keyboard with 4x6 keywells, 5-key thumb clusters
 
 Make example for this keyboard (after setting up your build environment):
 
-    make ergomacs:default
+    make orthomacs:default
 
 Flashing example for this keyboard:
 
-    make ergomacs:default:flash
+    make orthomacs:default:flash
 
 See the [build environment setup](https://docs.qmk.fm/#/getting_started_build_tools) and the [make instructions](https://docs.qmk.fm/#/getting_started_make_guide) for more information. Brand new to QMK? Start with our [Complete Newbs Guide](https://docs.qmk.fm/#/newbs).
 

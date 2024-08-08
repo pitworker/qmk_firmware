@@ -18,10 +18,34 @@
 
 #include "quantum.h"
 
+#ifndef MATRIX_INPUT_PRESSED_STATE
+#  define MATRIX_INPUT_PRESSED_STATE 0
+#endif
+
 static const pin_t row_pins[MATRIX_ROWS] = MATRIX_ROW_PINS;
 static const pin_t col_pins[MATRIX_COLS] = MATRIX_COL_PINS;
 
-static inline uint8_t read_matrix_pin(pin_t pin) {
+static inline void set_pin_output_low (pin_t pin) {
+  ATOMIC_BLOCK_FORCEON {
+    gpio_set_pin_output(pin);
+    gpio_write_pin_low(pin);
+  }
+}
+
+static inline void set_pin_output_high (pin_t pin) {
+  ATOMIC_BLOCK_FORCEON {
+    gpio_set_pin_output(pin);
+    gpio_write_pin_high(pin);
+  }
+}
+
+static inline void set_pin_input_high_atomic (pin_t pin) {
+  ATOMIC_BLOCK_FORCEON {
+    gpio_set_pin_input_high(pin);
+  }
+}
+
+static inline uint8_t read_matrix_pin (pin_t pin) {
   if (pin != NO_PIN) {
     return (gpio_read_pin(pin) == MATRIX_INPUT_PRESSED_STATE) ? 0 : 1;
   } else {
@@ -29,20 +53,44 @@ static inline uint8_t read_matrix_pin(pin_t pin) {
   }
 }
 
-static void select_row (uint8_t row) {
-  gpio_write_pin_low(row_pins[row]);
+static bool select_row (uint8_t row) {
+  pin_t pin = row_pins[row];
+  if (pin != NO_PIN) {
+    set_pin_output_low(pin);
+    return true;
+  }
+  return false;
 }
 
 static void unselect_row (uint8_t row) {
-  gpio_write_pin_high(row_pins[row]);
+  pin_t pin = row_pins[row];
+  if (pin != NO_PIN) {
+#   ifdef MATRIX_UNSELECT_DRIVE_HIGH
+    set_pin_output_high(pin);
+#   else
+    set_pin_input_high_atomic(pin);
+#   endif
+  }
 }
 
-static void select_col (uint8_t col) {
-  gpio_write_pin_low(col_pins[col]);
+static bool select_col (uint8_t col) {
+  pin_t pin = col_pins[col];
+  if (pin != NO_PIN) {
+    set_pin_output_low(pin);
+    return true;
+  }
+  return false;
 }
 
 static void unselect_col (uint8_t col) {
-  gpio_write_pin_high(col_pins[col]);
+  pin_t pin = col_pins[col];
+  if (pin != NO_PIN) {
+#   ifdef MATRIX_UNSELECT_DRIVE_HIGH
+    set_pin_output_high(pin);
+#   else
+    set_pin_input_high_atomic(pin);
+#   endif
+  }
 }
 
 static void unselect_all_rows (void) {
@@ -91,7 +139,7 @@ static bool matrix_read_rows_on_col (
 
   // Skip NO_PIN cols
   if (!select_col(current_col_index)) {
-    return;
+    return matrix_has_changed;
   }
   matrix_output_select_delay();
 
@@ -133,7 +181,7 @@ static bool matrix_read_cols_on_row (
 
   // Skip NO_PIN rows
   if (!select_row(current_row_index)) {
-    return;
+    return matrix_has_changed;
   }
   matrix_output_select_delay();
 

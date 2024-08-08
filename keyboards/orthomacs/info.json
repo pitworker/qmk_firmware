@@ -1,7 +1,7 @@
 {
-  "manufacturer": "Swan Carpenter <pitworker>",
-  "keyboard_name": "ergomacs",
-  "maintainer": "Swan Carpenter <pitworker>",
+  "manufacturer": "Swan <pitworker>",
+  "keyboard_name": "orthomacs",
+  "maintainer": "Swan <pitworker>",
   "bootloader": "rp2040",
   "features": {
     "bootmagic": true,
@@ -12,8 +12,8 @@
     "nkro": true
   },
   "matrix_pins": {
-    "cols": ["C2", "C2", "C2", "C2", "C2", "C2", "C2", "C2", "C2", "C2", "C2", "C2"],
-    "rows": ["D1", "D1", "D1", "D1", "D1"]
+    "cols": ["GP0", "C1", "C2", "C10", "C11", "C12"],
+    "rows": ["GP3", "GP4", "GP5", "GP6", "GP7"]
   },
   "processor": "RP2040",
   "url": "",
@@ -25,7 +25,7 @@
   "width": 12,
   "height": 5,
   "layouts": {
-    "LAYOUT_ortho_5x12": {
+    "LAYOUT": {
       "layout": [
         {"label": "kl00", "matrix": [0, 0],  "x": 0,  "y": 0, "w": 1, "h": 1},
         {"label": "kl01", "matrix": [0, 1],  "x": 1,  "y": 0, "w": 1, "h": 1},

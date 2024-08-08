@@ -1,4 +1,4 @@
-// Copyright 2023 Swan Carpenter (@pitworker)
+// Copyright 2023 Swan (@pitworker)
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #pragma once
