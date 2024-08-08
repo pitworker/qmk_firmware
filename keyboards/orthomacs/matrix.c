@@ -93,6 +93,7 @@ static void unselect_col (uint8_t col) {
   }
 }
 
+/*
 static void unselect_all_rows (void) {
   for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
     unselect_row(row);
@@ -104,6 +105,7 @@ static void unselect_all_cols (void) {
     unselect_col(col);
   }
 }
+*/
 
 static void set_matrix_read_cols (void) {
   for (uint8_t col = 0; col < MATRIX_COLS; col++) {
@@ -144,7 +146,7 @@ static bool matrix_read_rows_on_col (
   matrix_output_select_delay();
 
   // For each row...
-  for (uint8_t row_index = 0; row_index < ROWS_PER_HAND; row_index++) {
+  for (uint8_t row_index = 0; row_index < MATRIX_ROWS; row_index++) {
     matrix_row_t old_matrix_row = current_matrix[row_index];
 
     // Check row pin state
@@ -176,7 +178,7 @@ static bool matrix_read_cols_on_row (
 ) {
   bool matrix_has_changed = false;
   matrix_row_t current_row_values = 0;
-  // Start row_shifter with a one bit offset; only scanning odd matrix columns
+  // Start row_shifter with a one bit offset; only scanning odd design columns
   matrix_row_t row_shifter = MATRIX_ROW_SHIFTER << 1;
 
   // Skip NO_PIN rows
@@ -188,10 +190,13 @@ static bool matrix_read_cols_on_row (
   // For each col...
   for (
     uint8_t col_index = 0;
-    col_index << 1 < MATRIX_COLS;
-    col_index++, row_shifter <<= 2
+    col_index < MATRIX_COLS;
+    col_index++, row_shifter <<= 2 // only scanning odd design columns
   ) {
     uint8_t pin_state = read_matrix_pin(col_pins[col_index]);
+
+    // Map current pin state onto row bits
+    matrix_row_t current_value_in_row = pin_state ? 0 : row_shifter;
 
     // Populate the matrix row with the state of the col pin
     current_row_values |= current_value_in_row;
@@ -200,7 +205,7 @@ static bool matrix_read_cols_on_row (
   // Unselect row pin
   unselect_row(current_row_index);
   // Wait for all col signals to go HIGH
-  matrix_output_unselect_delay(current_row_index, current_row_value != 0);
+  matrix_output_unselect_delay(current_row_index, current_row_values != 0);
 
   // Check if any changes are being made to the matrix
   matrix_has_changed = current_row_values == current_matrix[current_row_index];
@@ -221,10 +226,10 @@ bool matrix_scan_custom (matrix_row_t current_matrix[]) {
   matrix_row_t row_shifter = MATRIX_ROW_SHIFTER;
 
   // scan cols
-  for (uint8_t row_index = 0; row_index < ROWS_PER_HAND; row_index++) {
+  for (uint8_t row_index = 0; row_index < MATRIX_ROWS; row_index++) {
     matrix_has_changed =
       matrix_has_changed ||
-      matrix_read_cols_on_row(current_matrix[], row_index);
+      matrix_read_cols_on_row(current_matrix, row_index);
   }
 
   // init rows
@@ -233,12 +238,12 @@ bool matrix_scan_custom (matrix_row_t current_matrix[]) {
   // scan rows
   for (
     uint8_t col_index = 0;
-    col_index << 1 < MATRIX_COLS;
-    col_index++, row_shifter <<= 2 // row scan only for even matrix columns
+    col_index < MATRIX_COLS;
+    col_index++, row_shifter <<= 2 // row scan only for even design columns
   ) {
     matrix_has_changed =
       matrix_has_changed ||
-      matrix_read_rows_on_col(current_matrix[], col_index, row_shifter);
+      matrix_read_rows_on_col(current_matrix, col_index, row_shifter);
   }
 
   // init cols
