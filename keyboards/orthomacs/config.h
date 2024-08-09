@@ -13,6 +13,10 @@
 // row, so 4 + 1 = 5 rows total
 #define MATRIX_ROWS 5
 
+// Number of rows in the keyboard design matches the number of rows in the
+// matrix (5)
+#define DESIGN_ROWS 5
+
 // Each hand has six columns, but every pair of columns shares a pin due to the
 // duplex matrix design, so 2 * 6 / 2 = 6 matrix columns total
 #define MATRIX_COLS 6
