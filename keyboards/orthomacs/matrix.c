@@ -22,8 +22,10 @@
 #  define MATRIX_INPUT_PRESSED_STATE 0
 #endif
 
+#define MATRIX_COLS_PIN_COUNT MATRIX_COLS >> 1
+
 static const pin_t row_pins[MATRIX_ROWS] = MATRIX_ROW_PINS;
-static const pin_t col_pins[MATRIX_COLS] = MATRIX_COL_PINS;
+static const pin_t col_pins[MATRIX_COLS_PIN_COUNT] = MATRIX_COL_PINS;
 
 static inline void set_pin_output_low (pin_t pin) {
   ATOMIC_BLOCK_FORCEON {
@@ -108,7 +110,7 @@ static void unselect_all_cols (void) {
 */
 
 static void set_matrix_read_cols (void) {
-  for (uint8_t col = 0; col < MATRIX_COLS; col++) {
+  for (uint8_t col = 0; col < MATRIX_COLS_PIN_COUNT; col++) {
     gpio_set_pin_input(col_pins[col]);
   }
   for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
@@ -121,7 +123,7 @@ static void set_matrix_read_rows (void) {
   for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
     gpio_set_pin_input(row_pins[row]);
   }
-  for (uint8_t col = 0; col < MATRIX_COLS; col++) {
+  for (uint8_t col = 0; col < MATRIX_COLS_PIN_COUNT; col++) {
     gpio_set_pin_output(col_pins[col]);
     unselect_col(col);
   }
@@ -190,7 +192,7 @@ static bool matrix_read_cols_on_row (
   // For each col...
   for (
     uint8_t col_index = 0;
-    col_index < MATRIX_COLS;
+    col_index < MATRIX_COLS_PIN_COUNT;
     col_index++, row_shifter <<= 2 // only scanning odd design columns
   ) {
     uint8_t pin_state = read_matrix_pin(col_pins[col_index]);
@@ -238,7 +240,7 @@ bool matrix_scan_custom (matrix_row_t current_matrix[]) {
   // scan rows
   for (
     uint8_t col_index = 0;
-    col_index < MATRIX_COLS;
+    col_index < MATRIX_COLS_PIN_COUNT;
     col_index++, row_shifter <<= 2 // row scan only for even design columns
   ) {
     matrix_has_changed =
