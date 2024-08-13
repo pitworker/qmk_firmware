@@ -111,7 +111,7 @@ static void unselect_all_cols (void) {
 */
 
 static void set_matrix_read_cols (void) {
-  print("ORTHOMACS setting up to read cols");
+  print("ORTHOMACS setting up to read cols\n");
 
   for (uint8_t col = 0; col < MATRIX_COLS_PIN_COUNT; col++) {
     gpio_set_pin_input(col_pins[col]);
@@ -123,7 +123,7 @@ static void set_matrix_read_cols (void) {
 }
 
 static void set_matrix_read_rows (void) {
-  print("ORTHOMACS setting to read rows");
+  print("ORTHOMACS setting to read rows\n");
 
   for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
     gpio_set_pin_input(row_pins[row]);
@@ -135,7 +135,7 @@ static void set_matrix_read_rows (void) {
 }
 
 static void init_pins (void) {
-  print("ORTHOMACS initializing");
+  print("ORTHOMACS initializing\n");
   set_matrix_read_cols(); // scan starts by reading cols
 }
 
@@ -157,6 +157,8 @@ static bool matrix_read_rows_on_col (
   for (uint8_t row_index = 0; row_index < MATRIX_ROWS; row_index++) {
     matrix_row_t old_matrix_row = current_matrix[row_index];
 
+    uprintf("Reading row %i on column %i\n", row_index, current_col_index);
+
     // Check row pin state
     if (read_matrix_pin(row_pins[row_index]) == 0) {
       // Pin LOW, set col bit
@@ -172,7 +174,7 @@ static bool matrix_read_rows_on_col (
       matrix_has_changed || (old_matrix_row == current_matrix[row_index]);
 
       if (matrix_has_changed) {
-        uprintf("ORTHOMACS matrix changed with new row value %i", current_matrix[row_index]);
+        uprintf("ORTHOMACS matrix changed with new row value %X\n", current_matrix[row_index]);
       }
   }
 
@@ -182,7 +184,7 @@ static bool matrix_read_rows_on_col (
   matrix_output_unselect_delay(current_col_index, key_pressed);
 
   if (!matrix_has_changed) {
-    print("ORTHOMACS no changes to matrix found reading rows");
+    print("ORTHOMACS no changes to matrix found reading rows\n");
   }
 
   return matrix_has_changed;
@@ -194,6 +196,7 @@ static bool matrix_read_cols_on_row (
 ) {
   bool matrix_has_changed = false;
   matrix_row_t current_row_values = 0;
+  matrix_row_t previous_row_values = current_matrix[current_row_index];
   // Start row_shifter with a one bit offset; only scanning odd design columns
   matrix_row_t row_shifter = MATRIX_ROW_SHIFTER << 1;
 
@@ -214,6 +217,8 @@ static bool matrix_read_cols_on_row (
     // Map current pin state onto row bits
     matrix_row_t current_value_in_row = pin_state ? 0 : row_shifter;
 
+    uprintf("Reading column %i on row %i\n", col_index, current_row_index);
+
     // Populate the matrix row with the state of the col pin
     current_row_values |= current_value_in_row;
   }
@@ -224,22 +229,25 @@ static bool matrix_read_cols_on_row (
   matrix_output_unselect_delay(current_row_index, current_row_values != 0);
 
   // Check if any changes are being made to the matrix
-  matrix_has_changed = current_row_values == current_matrix[current_row_index];
+  matrix_has_changed = current_row_values == previous_row_values;
+
+  if (matrix_has_changed) {
+    uprintf("ORTHOMACS matrix changed with new row value %X\n", current_row_values);
+    uprintf("ORTHOMACS matrix old value %X\n", previous_row_values);
+    uprintf("ORTHOMACS matrix comparison %X\n", matrix_has_changed);
+  } else {
+    print("ORTHOMACS no changes to matrix found reading cols\n");
+  }
 
   // Update the matrix
   current_matrix[current_row_index] = current_row_values;
-
-  if (matrix_has_changed) {
-    uprintf("ORTHOMACS matrix changed with new row value %i", current_row_values);
-  } else {
-    print("ORTHOMACS no changes to matrix found reading cols");
-  }
 
   return matrix_has_changed;
 }
 
 void matrix_init_custom (void) {
   // TODO: initialize hardware here
+  print("ORTHOMACS does this thing work???\n");
   init_pins();
 }
 
@@ -247,30 +255,32 @@ bool matrix_scan_custom (matrix_row_t current_matrix[]) {
   bool matrix_has_changed = false;
   matrix_row_t row_shifter = MATRIX_ROW_SHIFTER;
 
+  print("ORTHOMACS matrix scanning\n");
+
   // scan cols
-  print("ORTHOMACS begin reading cols");
+  uprintf("ORTHOMACS begin reading cols on %i rows\n", MATRIX_ROWS);
   for (uint8_t row_index = 0; row_index < MATRIX_ROWS; row_index++) {
     matrix_has_changed =
-      matrix_has_changed ||
-      matrix_read_cols_on_row(current_matrix, row_index);
+      matrix_read_cols_on_row(current_matrix, row_index) ||
+      matrix_has_changed;
   }
-  print("ORTHOMACS end reading cols");
+  print("ORTHOMACS end reading cols\n");
 
   // init rows
   set_matrix_read_rows();
 
   // scan rows
-  print("ORTHOMACS begin reading rows");
+  uprintf("ORTHOMACS begin reading rows on %i cols\n", MATRIX_COLS);
   for (
     uint8_t col_index = 0;
     col_index < MATRIX_COLS_PIN_COUNT;
     col_index++, row_shifter <<= 2 // row scan only for even design columns
   ) {
     matrix_has_changed =
-      matrix_has_changed ||
-      matrix_read_rows_on_col(current_matrix, col_index, row_shifter);
+      matrix_read_rows_on_col(current_matrix, col_index, row_shifter) ||
+      matrix_has_changed;
   }
-  print("ORTHOMACS end reading rows");
+  print("ORTHOMACS end reading rows\n");
 
   // init cols
   set_matrix_read_cols();
