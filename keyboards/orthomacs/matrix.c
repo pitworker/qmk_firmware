@@ -156,11 +156,18 @@ static bool matrix_read_rows_on_col (
   // For each row...
   for (uint8_t row_index = 0; row_index < MATRIX_ROWS; row_index++) {
     matrix_row_t old_matrix_row = current_matrix[row_index];
+    uint8_t pin_state = read_matrix_pin(row_pins[row_index]);
 
-    uprintf("Reading row %i on column %i\n", row_index, current_col_index);
+    // uprintf("Reading row %i on column %i\n", row_index, current_col_index);
+    uprintf(
+      "Reading pin state of %i for matrix col %i and row %i\n",
+      pin_state,
+      current_col_index * 2,
+      row_index
+    );
 
     // Check row pin state
-    if (read_matrix_pin(row_pins[row_index]) == 0) {
+    if (pin_state == 0) {
       // Pin LOW, set col bit
       current_matrix[row_index] |= row_shifter;
       key_pressed = true;
@@ -214,10 +221,17 @@ static bool matrix_read_cols_on_row (
   ) {
     uint8_t pin_state = read_matrix_pin(col_pins[col_index]);
 
+    uprintf(
+      "Reading pin state of %i for matrix col %i and row %i\n",
+      pin_state,
+      col_index * 2 + 1,
+      current_row_index
+    );
+
     // Map current pin state onto row bits
     matrix_row_t current_value_in_row = pin_state ? 0 : row_shifter;
 
-    uprintf("Reading column %i on row %i\n", col_index, current_row_index);
+    // uprintf("Reading column %i on row %i\n", col_index, current_row_index);
 
     // Populate the matrix row with the state of the col pin
     current_row_values |= current_value_in_row;
