@@ -64,21 +64,27 @@ static inline uint8_t read_matrix_pin (pin_t pin) {
 }
 */
 
-static void select_row (uint8_t row) {
-  gpio_set_pin_output(row_pins[row]);
-  gpio_write_pin_low(row_pins[row]);
-  /*
+static bool select_row (uint8_t row) {
   pin_t pin = row_pins[row];
   if (pin != NO_PIN) {
-    set_pin_output_low(pin);
+    ATOMIC_BLOCK_FORCEON {
+      gpio_set_pin_output(pin);
+      gpio_write_pin_low(pin);
+    }
     return true;
   }
   return false;
-  */
 }
 
 static void unselect_row (uint8_t row) {
-  gpio_set_pin_input_high(row_pins[row]);
+  // gpio_set_pin_input_high(row_pins[row]);
+  pin_t pin = row_pins[row];
+  if (pin != NO_PIN) {
+    ATOMIC_BLOCK_FORCEON {
+      gpio_set_pin_output(pin);
+      gpio_write_pin_high(pin);
+    }
+  }
   /*
   pin_t pin = row_pins[row];
   if (pin != NO_PIN) {
@@ -91,21 +97,29 @@ static void unselect_row (uint8_t row) {
   */
 }
 
-static void select_col (uint8_t col) {
-  gpio_set_pin_output(col_pins[col]);
-  gpio_write_pin_low(col_pins[col]);
-  /*
+static bool select_col (uint8_t col) {
   pin_t pin = col_pins[col];
   if (pin != NO_PIN) {
-    set_pin_output_low(pin);
+    ATOMIC_BLOCK_FORCEON {
+      gpio_set_pin_output(pin);
+      gpio_write_pin_low(pin);
+    }
     return true;
   }
   return false;
-  */
 }
 
 static void unselect_col (uint8_t col) {
-  gpio_set_pin_input_high(col_pins[col]);
+  //gpio_set_pin_input_high(col_pins[col]);
+
+  pin_t pin = col_pins[col];
+  if (pin != NO_PIN) {
+    ATOMIC_BLOCK_FORCEON {
+      gpio_set_pin_output(pin);
+      gpio_write_pin_high(pin);
+    }
+  }
+
   /*
   pin_t pin = col_pins[col];
   if (pin != NO_PIN) {
@@ -126,7 +140,7 @@ static void unselect_all_rows (void) {
 }
 
 static void unselect_all_cols (void) {
-  for (uint8_t col = 0; col < MATRIX_COLS; col++) {
+  for (uint8_t col = 0; col < MATRIX_COLS_PIN_COUNT; col++) {
     unselect_col(col);
   }
 }
