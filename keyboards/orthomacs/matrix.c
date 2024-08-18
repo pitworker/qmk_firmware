@@ -34,36 +34,6 @@
 static const pin_t row_pins[MATRIX_ROWS] = MATRIX_ROW_PINS;
 static const pin_t col_pins[MATRIX_COLS_PIN_COUNT] = MATRIX_COL_PINS;
 
-/*
-static inline void set_pin_output_low (pin_t pin) {
-  ATOMIC_BLOCK_FORCEON {
-    gpio_set_pin_output(pin);
-    gpio_write_pin_low(pin);
-  }
-}
-
-static inline void set_pin_output_high (pin_t pin) {
-  ATOMIC_BLOCK_FORCEON {
-    gpio_set_pin_output(pin);
-    gpio_write_pin_high(pin);
-  }
-}
-
-static inline void set_pin_input_high_atomic (pin_t pin) {
-  ATOMIC_BLOCK_FORCEON {
-    gpio_set_pin_input_high(pin);
-  }
-}
-
-static inline uint8_t read_matrix_pin (pin_t pin) {
-  if (pin != NO_PIN) {
-    return (gpio_read_pin(pin) == MATRIX_INPUT_PRESSED_STATE) ? 0 : 1;
-  } else {
-    return 1;
-  }
-}
-*/
-
 static bool select_row (uint8_t row) {
   pin_t pin = row_pins[row];
   if (pin != NO_PIN) {
@@ -77,7 +47,6 @@ static bool select_row (uint8_t row) {
 }
 
 static void unselect_row (uint8_t row) {
-  // gpio_set_pin_input_high(row_pins[row]);
   pin_t pin = row_pins[row];
   if (pin != NO_PIN) {
     ATOMIC_BLOCK_FORCEON {
@@ -85,16 +54,6 @@ static void unselect_row (uint8_t row) {
       gpio_write_pin_high(pin);
     }
   }
-  /*
-  pin_t pin = row_pins[row];
-  if (pin != NO_PIN) {
-#   ifdef MATRIX_UNSELECT_DRIVE_HIGH
-    set_pin_output_high(pin);
-#   else
-    set_pin_input_high_atomic(pin);
-#   endif
-  }
-  */
 }
 
 static bool select_col (uint8_t col) {
@@ -110,8 +69,6 @@ static bool select_col (uint8_t col) {
 }
 
 static void unselect_col (uint8_t col) {
-  //gpio_set_pin_input_high(col_pins[col]);
-
   pin_t pin = col_pins[col];
   if (pin != NO_PIN) {
     ATOMIC_BLOCK_FORCEON {
@@ -119,19 +76,7 @@ static void unselect_col (uint8_t col) {
       gpio_write_pin_high(pin);
     }
   }
-
-  /*
-  pin_t pin = col_pins[col];
-  if (pin != NO_PIN) {
-#   ifdef MATRIX_UNSELECT_DRIVE_HIGH
-    set_pin_output_high(pin);
-#   else
-    set_pin_input_high_atomic(pin);
-#   endif
-  }
-  */
 }
-
 
 static void unselect_all_rows (void) {
   for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
@@ -145,63 +90,33 @@ static void unselect_all_cols (void) {
   }
 }
 
-/*
-static void set_matrix_read_cols (void) {
-  print("ORTHOMACS setting up to read cols\n");
-
-  for (uint8_t col = 0; col < MATRIX_COLS_PIN_COUNT; col++) {
-    gpio_set_pin_input(col_pins[col]);
+static bool read_matrix_pin (pin_t pin) {
+  if (pin != NO_PIN) {
+    return gpio_read_pin(pin) == MATRIX_INPUT_PRESSED_STATE;
   }
-  for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
-    gpio_set_pin_output(row_pins[row]);
-    unselect_row(row);
-  }
+  return false;
 }
-
-static void set_matrix_read_rows (void) {
-  print("ORTHOMACS setting to read rows\n");
-
-  for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
-    gpio_set_pin_input(row_pins[row]);
-  }
-  for (uint8_t col = 0; col < MATRIX_COLS_PIN_COUNT; col++) {
-    gpio_set_pin_output(col_pins[col]);
-    unselect_col(col);
-  }
-}
-*/
 
 static void init_pins (void) {
   print("ORTHOMACS initializing\n");
   unselect_all_cols();
   unselect_all_rows();
-  /*
-  set_matrix_read_cols(); // scan starts by reading cols
-  set_matrix_read_rows();
-  */
 }
 
 static bool matrix_read_rows_on_col (
   matrix_row_t current_matrix[],
-  uint8_t current_col_index /*,
-  matrix_row_t row_shifter
-  */
+  uint8_t current_col_index
 ) {
   bool matrix_has_changed = false;
-  // bool key_pressed = false;
 
   // Scanning on col only reads even matrix columns
   matrix_row_t col_index_bitmask =
     MATRIX_ROW_SHIFTER << (current_col_index * 2);
 
-  /*
   // Select column, skip if NO_PIN
   if (!select_col(current_col_index)) {
     return matrix_has_changed;
   }
-  */
-
-  select_col(current_col_index);
 
   // Wait for column selection to stabilize
   matrix_output_select_delay();
@@ -209,49 +124,24 @@ static bool matrix_read_rows_on_col (
   // For each row...
   for (uint8_t row_index = 0; row_index < MATRIX_ROWS; row_index++) {
     matrix_row_t old_row_values = current_matrix[row_index];
-    uint8_t pin_state = gpio_read_pin(row_pins[row_index]);
-    // read_matrix_pin(row_pins[row_index]);
-
-    // uprintf("Reading row %i on column %i\n", row_index, current_col_index);
-    /*
-    uprintf(
-      "Reading pin state of %i for matrix col %i and row %i\n",
-      pin_state,
-      current_col_index * 2,
-      row_index
-    );
-    */
+    bool pin_state = read_matrix_pin(row_pins[row_index]);
 
     // Check row pin state
     if (pin_state) {
-      // Pin HIGH, clear col bit
-      current_matrix[row_index] &= ~col_index_bitmask;
-    } else {
-      // Pin LOW, set col bit
+      // Pin registered keypress, set col bit
       current_matrix[row_index] |= col_index_bitmask;
+    } else {
+      // Pin did not register keypress, clear col bit
+      current_matrix[row_index] &= ~col_index_bitmask;
     }
 
     // Check if any changes were made to the matrix
     matrix_has_changed =
       (old_row_values != current_matrix[row_index]) || matrix_has_changed;
-
-    if (matrix_has_changed) {
-      uprintf(
-        "ORTHOMACS matrix changed with new row value %X\n",
-        current_matrix[row_index]
-      );
-    }
   }
 
   // Unselect col pin
   unselect_col(current_col_index);
-
-  // Wait for all row signals to go HIGH
-  // matrix_output_unselect_delay(current_col_index, key_pressed);
-
-  if (!matrix_has_changed) {
-    print("ORTHOMACS no changes to matrix found reading rows\n");
-  }
 
   return matrix_has_changed;
 }
@@ -262,15 +152,11 @@ static bool matrix_read_cols_on_row (
 ) {
   bool matrix_has_changed = false;
   matrix_row_t old_row_values = current_matrix[current_row_index];
-  // matrix_row_t current_row_values = 0;
 
-  /*
-  // Skip NO_PIN rows
+  // Select row, skip if NO_PIN
   if (!select_row(current_row_index)) {
     return matrix_has_changed;
   }
-  */
-  select_row(current_row_index);
 
   // Wait for row selection to stabilize
   matrix_output_select_delay();
@@ -282,111 +168,61 @@ static bool matrix_read_cols_on_row (
     col_index++
   ) {
     // Scanning on row only reads even matrix columns
-    matrix_row_t column_index_bitmask =
+    matrix_row_t col_index_bitmask =
       MATRIX_ROW_SHIFTER << (col_index * 2 + 1);
-    uint8_t pin_state = gpio_read_pin(col_pins[col_index]);
-      // read_matrix_pin(col_pins[col_index]);
+    bool pin_state = read_matrix_pin(col_pins[col_index]);
 
-    uprintf(
-      "Reading pin state of %i for matrix col %i and row %i\n",
-      pin_state,
-      col_index * 2 + 1,
-      current_row_index
-    );
-
+    // Check row pin state
     if (pin_state) {
-      // Pin HI, clear col bit
-      current_matrix[current_row_index] &= ~column_index_bitmask;
+      // Pin registered keypress, set row bit
+      current_matrix[current_row_index] |= col_index_bitmask;
     } else {
-      current_matrix[current_row_index] |= column_index_bitmask;
+      // Pin did not register keypress, clear col bit
+      current_matrix[current_row_index] &= ~col_index_bitmask;
     }
-
-    /*
-    // Map current pin state onto row bits
-    matrix_row_t current_value_in_row = pin_state ? 0 : row_shifter;
-
-    // uprintf("Reading column %i on row %i\n", col_index, current_row_index);
-
-    // Populate the matrix row with the state of the col pin
-    current_row_values |= current_value_in_row;
-    */
   }
 
   // Unselect row pin
   unselect_row(current_row_index);
 
-  // Wait for all col signals to go HIGH
-  // matrix_output_unselect_delay(current_row_index, current_row_values != 0);
-
   // Check if any changes are being made to the matrix
   matrix_has_changed = current_matrix[current_row_index] != old_row_values;
-
-  if (matrix_has_changed) {
-    uprintf(
-      "ORTHOMACS matrix changed with new row value %X\n",
-      current_matrix[current_row_index]
-    );
-    uprintf("ORTHOMACS matrix old value %X\n", old_row_values);
-    uprintf("ORTHOMACS matrix comparison %X\n", matrix_has_changed);
-  } else {
-    print("ORTHOMACS no changes to matrix found reading cols\n");
-  }
-
-  // Update the matrix
-  // current_matrix[current_row_index] = current_row_values;
 
   return matrix_has_changed;
 }
 
 void matrix_init_custom (void) {
-  // TODO: initialize hardware here
-  print("ORTHOMACS does this thing work???\n");
   init_pins();
 }
 
 bool matrix_scan_custom (matrix_row_t current_matrix[]) {
   bool matrix_has_changed = false;
 
-  // matrix_row_t row_shifter = MATRIX_ROW_SHIFTER;
-
-  print("ORTHOMACS matrix scanning\n");
-
-  // Set row, scan cols
-  uprintf("ORTHOMACS begin reading cols on %i rows\n", MATRIX_ROWS);
+  // Read columns on all rows
   for (uint8_t row_index = 0; row_index < MATRIX_ROWS; row_index++) {
     matrix_has_changed =
       matrix_read_cols_on_row(current_matrix, row_index) ||
       matrix_has_changed;
   }
-  print("ORTHOMACS end reading cols\n");
 
-  // init rows
-  // set_matrix_read_rows();
-
-  // Set col, scan rows
-  uprintf("ORTHOMACS begin reading rows on %i cols\n", MATRIX_COLS);
+  // Read rows on all columns
   for (
     uint8_t col_index = 0;
     col_index < MATRIX_COLS_PIN_COUNT;
-    col_index++ //, row_shifter <<= 2 // row scan only for even design columns
+    col_index++
   ) {
     matrix_has_changed =
       matrix_read_rows_on_col(current_matrix, col_index) ||
       matrix_has_changed;
   }
-  print("ORTHOMACS end reading rows\n");
 
-  // init cols
-  // set_matrix_read_cols();
-
-  for (uint8_t row_index = 0; row_index < MATRIX_ROWS; row_index++) {
-    /*
-    for (uint8_t col_offset = MATRIX_COLS - 1; col_offset >= 0; col_offset--) {
-      uprintf("%X ", (current_matrix[row_index] >> col_offset) & 1);
+# ifndef NO_DEBUG
+    if (matrix_has_changed) {
+      for (uint8_t row_index = 0; row_index < MATRIX_ROWS; row_index++) {
+        uprintf("%X\n", current_matrix[row_index]);
+      }
+      print("\n");
     }
-    */
-    uprintf("%X\n", current_matrix[row_index]);
-  }
-
+# endif
   return matrix_has_changed;
 }

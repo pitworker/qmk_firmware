@@ -3,10 +3,6 @@
 
 #pragma once
 
-/* diode direction */
-// #define DIODE_DIRECTION CUSTOM_MATRIX
-// I don't think I need this ^ (?)
-
 /* key matrix size */
 
 // Rows span both hands, with four keywell rows and one dedicated thumb cluster
